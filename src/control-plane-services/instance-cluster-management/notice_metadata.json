@@ -275,8 +275,7 @@
     },
     "jakarta.servlet:jakarta.servlet-api:6.1.0": {
       "licenses": [
-        "EPL 2.0",
-        "GPL2 w/ CPE"
+        "EPL 2.0"
       ],
       "name": "Jakarta Servlet",
       "url": "https://projects.eclipse.org/projects/ee4j.servlet"
@@ -318,8 +317,7 @@
     },
     "net.logstash.logback:logstash-logback-encoder:8.1": {
       "licenses": [
-        "Apache License, Version 2.0",
-        "MIT License"
+        "Apache License, Version 2.0"
       ],
       "name": "Logstash Logback Encoder",
       "url": "https://github.com/logfellow/logstash-logback-encoder"
@@ -431,8 +429,6 @@
     },
     "org.javassist:javassist:3.28.0-GA": {
       "licenses": [
-        "MPL 1.1",
-        "LGPL 2.1",
         "Apache License 2.0"
       ],
       "name": "Javassist",
@@ -461,7 +457,6 @@
     },
     "org.reflections:reflections:0.10.2": {
       "licenses": [
-        "WTFPL",
         "The Apache Software License, Version 2.0"
       ],
       "name": "Reflections",
