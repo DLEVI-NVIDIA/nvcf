@@ -54,8 +54,14 @@ type ServerConfig struct {
 	ReadHeaderTimeout time.Duration
 	ReadTimeout       time.Duration
 	WriteTimeout      time.Duration
-	IdleTimeout       time.Duration
-	Region            string
+	// InferenceWriteTimeout replaces WriteTimeout on inference routes. It
+	// bounds each write rather than the whole response and does not run
+	// between writes, so long generations, streams, and upstream pauses are
+	// not cut off; it only stops a write that stalls on a client that
+	// stopped reading. Zero or negative disables the deadline.
+	InferenceWriteTimeout time.Duration
+	IdleTimeout           time.Duration
+	Region                string
 	// MaxRequestBodyBytes rejects larger request bodies with 413. Zero disables
 	// the limit.
 	MaxRequestBodyBytes int64
@@ -192,12 +198,13 @@ func Default() *Config {
 			MetricsPort: 9464,
 		},
 		Server: ServerConfig{
-			Addr:              ":8080",
-			ReadHeaderTimeout: 5 * time.Second,
-			ReadTimeout:       15 * time.Second,
-			WriteTimeout:      60 * time.Second,
-			IdleTimeout:       60 * time.Second,
-			Region:            "global",
+			Addr:                  ":8080",
+			ReadHeaderTimeout:     5 * time.Second,
+			ReadTimeout:           15 * time.Second,
+			WriteTimeout:          60 * time.Second,
+			InferenceWriteTimeout: 60 * time.Second,
+			IdleTimeout:           60 * time.Second,
+			Region:                "global",
 		},
 		Stargate: StargateConfig{
 			URL:            "http://127.0.0.1:8000",
@@ -313,6 +320,10 @@ func applyServerTelemetryEnv(cfg *Config, errs *envErrs) {
 
 	if region := os.Getenv("NVCF_REGION"); region != "" {
 		cfg.Server.Region = region
+	}
+
+	if timeout, ok := errs.duration("NVCF_GATEWAY_INFERENCE_WRITE_TIMEOUT"); ok {
+		cfg.Server.InferenceWriteTimeout = timeout
 	}
 }
 
