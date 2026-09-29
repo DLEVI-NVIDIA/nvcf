@@ -354,21 +354,35 @@ type ChatCompletionToolCallChunk struct {
 }
 
 type ChatCompletionMessage struct {
-	Role         string                      `json:"role"`
-	Content      *string                     `json:"content,omitempty"`
-	Reasoning    *string                     `json:"reasoning,omitempty"`
-	ToolCalls    *[]ChatCompletionToolCall   `json:"tool_calls,omitempty"`
-	FunctionCall *ChatCompletionFunctionCall `json:"function_call,omitempty"`
+	Role      string  `json:"role"`
+	Content   *string `json:"content,omitempty"`
+	Reasoning *string `json:"reasoning,omitempty"`
+	// ReasoningContent is the field name vLLM-compatible reasoning parsers use.
+	ReasoningContent *string                     `json:"reasoning_content,omitempty"`
+	ToolCalls        *[]ChatCompletionToolCall   `json:"tool_calls,omitempty"`
+	FunctionCall     *ChatCompletionFunctionCall `json:"function_call,omitempty"`
+	// Extensions holds upstream members this struct does not declare.
+	Extensions map[string]json.RawMessage `json:"-"`
+}
+
+func (m ChatCompletionMessage) MarshalJSON() ([]byte, error) {
+	type alias ChatCompletionMessage
+	encoded, err := json.Marshal((*alias)(&m))
+	if err != nil {
+		return nil, err
+	}
+	return MergeJSONMembers(encoded, m.Extensions)
 }
 
 type ChatCompletionChunkDelta struct {
-	Role           *string                        `json:"role,omitempty"`
-	Content        *string                        `json:"content,omitempty"`
-	Reasoning      *string                        `json:"reasoning,omitempty"`
-	SendNilContent bool                           `json:"-"`
-	ToolCalls      *[]ChatCompletionToolCallChunk `json:"tool_calls,omitempty"`
-	FunctionCall   *ChatCompletionFunctionCall    `json:"function_call,omitempty"`
-	Channel        string                         `json:"channel,omitempty"`
+	Role             *string                        `json:"role,omitempty"`
+	Content          *string                        `json:"content,omitempty"`
+	Reasoning        *string                        `json:"reasoning,omitempty"`
+	ReasoningContent *string                        `json:"reasoning_content,omitempty"`
+	SendNilContent   bool                           `json:"-"`
+	ToolCalls        *[]ChatCompletionToolCallChunk `json:"tool_calls,omitempty"`
+	FunctionCall     *ChatCompletionFunctionCall    `json:"function_call,omitempty"`
+	Channel          string                         `json:"channel,omitempty"`
 }
 
 func (ccd *ChatCompletionChunkDelta) MarshalJSON() ([]byte, error) {
@@ -389,15 +403,46 @@ func (ccd *ChatCompletionChunkDelta) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// ChatCompletionLogprobs keeps token entries as raw JSON so backend-specific
+// members survive stream aggregation.
+type ChatCompletionLogprobs struct {
+	Content []json.RawMessage `json:"content"`
+	Refusal []json.RawMessage `json:"refusal,omitempty"`
+	// Extensions holds upstream members this struct does not declare.
+	Extensions map[string]json.RawMessage `json:"-"`
+}
+
+func (l ChatCompletionLogprobs) MarshalJSON() ([]byte, error) {
+	type alias ChatCompletionLogprobs
+	encoded, err := json.Marshal((*alias)(&l))
+	if err != nil {
+		return nil, err
+	}
+	return MergeJSONMembers(encoded, l.Extensions)
+}
+
 type ChatCompletionChoice struct {
-	Index        uint32                `json:"index"`
-	Message      ChatCompletionMessage `json:"message"`
-	FinishReason string                `json:"finish_reason"`
+	Index        uint32                  `json:"index"`
+	Message      ChatCompletionMessage   `json:"message"`
+	Logprobs     *ChatCompletionLogprobs `json:"logprobs,omitempty"`
+	FinishReason string                  `json:"finish_reason"`
+	// Extensions holds upstream members this struct does not declare.
+	Extensions map[string]json.RawMessage `json:"-"`
+}
+
+func (c ChatCompletionChoice) MarshalJSON() ([]byte, error) {
+	type alias ChatCompletionChoice
+	encoded, err := json.Marshal((*alias)(&c))
+	if err != nil {
+		return nil, err
+	}
+	return MergeJSONMembers(encoded, c.Extensions)
 }
 
 type ChatCompletionChunkChoice struct {
 	Index        uint32                   `json:"index"`
 	Delta        ChatCompletionChunkDelta `json:"delta"`
+	Logprobs     *ChatCompletionLogprobs  `json:"logprobs,omitempty"`
 	FinishReason *string                  `json:"finish_reason"`
 }
 
@@ -419,6 +464,17 @@ type ChatCompletionUsage struct {
 	TotalTime               float64                  `json:"total_time"`
 	PromptTokensDetails     *PromptTokensDetails     `json:"prompt_tokens_details,omitempty"`
 	CompletionTokensDetails *CompletionTokensDetails `json:"completion_tokens_details,omitempty"`
+	// Raw is the upstream usage object. When set it is written as is, so
+	// members this struct does not declare, including nested ones, survive.
+	Raw json.RawMessage `json:"-"`
+}
+
+func (u ChatCompletionUsage) MarshalJSON() ([]byte, error) {
+	if len(u.Raw) > 0 {
+		return u.Raw, nil
+	}
+	type alias ChatCompletionUsage
+	return json.Marshal((*alias)(&u))
 }
 
 type ChatCompletionResponse struct {
@@ -430,6 +486,17 @@ type ChatCompletionResponse struct {
 	Usage             ChatCompletionUsage    `json:"usage"`
 	SystemFingerprint *string                `json:"system_fingerprint,omitempty"`
 	ServiceTier       servicetier.Tier       `json:"service_tier,omitempty"`
+	// Extensions holds upstream members this struct does not declare.
+	Extensions map[string]json.RawMessage `json:"-"`
+}
+
+func (c ChatCompletionResponse) MarshalJSON() ([]byte, error) {
+	type alias ChatCompletionResponse
+	encoded, err := json.Marshal((*alias)(&c))
+	if err != nil {
+		return nil, err
+	}
+	return MergeJSONMembers(encoded, c.Extensions)
 }
 
 func (c *ChatCompletionResponse) FirstFinishReason() string {
