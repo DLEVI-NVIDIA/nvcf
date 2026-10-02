@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -33,7 +34,7 @@ type editionPreparation struct {
 
 func runEdition(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: docs-version-sync edition <prepare|check|register|manifest> [flags]")
+		return fmt.Errorf("usage: docs-version-sync edition <prepare|check|register|manifest|links> [flags]")
 	}
 	command := args[0]
 	flags := flag.NewFlagSet("edition "+command, flag.ContinueOnError)
@@ -58,7 +59,7 @@ func runEdition(args []string) error {
 	}
 	allowed := map[string]string{
 		"prepare": "repo version source previous-version change self-managed compute-plane observability navigation qualification out",
-		"check":   "repo local-refs", "register": "repo version commit local-refs", "manifest": "repo",
+		"check":   "repo local-refs", "register": "repo version commit local-refs", "manifest": "repo", "links": "repo navigation",
 	}
 	fields, ok := allowed[command]
 	if !ok {
@@ -86,6 +87,8 @@ func runEdition(args []string) error {
 		return err
 	}
 	switch command {
+	case "links":
+		return stageEditionLinks(root, *nav)
 	case "prepare":
 		plan := editionPreparation{Source: *source, Version: *version, PreviousVersion: *previous, Change: *change, SelfManaged: *selfManaged, ComputePlane: *compute, Observability: *obs, Navigation: *nav, Qualification: *qualification}
 		return prepareEdition(root, *out, plan)
@@ -166,6 +169,9 @@ func prepareEdition(root, out string, plan editionPreparation) error {
 		return err
 	}
 	if err := writeBranchConfiguration(staged, plan); err != nil {
+		return err
+	}
+	if err := stageEditionLinks(staged, plan.Navigation); err != nil {
 		return err
 	}
 	plan.Digest, err = editionTreeDigest(staged)
@@ -265,20 +271,82 @@ func writeBranchConfiguration(root string, plan editionPreparation) error {
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return err
 	}
-	delete(config, "products")
-	delete(config, "navigation")
-	delete(config, "tabs")
-	config["versions"] = []any{map[string]any{"display-name": plan.Version, "path": plan.Navigation}}
-	data, err = yaml.Marshal(config)
-	if err != nil {
+	archives := editionArchives(config)
+	var document, versions yaml.Node
+	if err := yaml.Unmarshal(data, &document); err != nil {
 		return err
 	}
+	if err := versions.Encode(append([]any{map[string]any{"display-name": plan.Version, "slug": plan.Version, "path": plan.Navigation}}, archives...)); err != nil {
+		return err
+	}
+	// Preserve the reviewed shell, redirects, comments, and scalar formatting.
+	// Only the navigation selector changes when preparing a release branch.
+	mapping := document.Content[0]
+	var fields []*yaml.Node
+	replaced := false
+	for i := 0; i < len(mapping.Content); i += 2 {
+		key, value := mapping.Content[i], mapping.Content[i+1]
+		switch key.Value {
+		case "products", "versions":
+			if !replaced {
+				fields = append(fields, &yaml.Node{Kind: yaml.ScalarNode, Value: "versions"}, &versions)
+				replaced = true
+			}
+		case "navigation", "tabs":
+		default:
+			fields = append(fields, key, value)
+		}
+	}
+	if !replaced {
+		fields = append(fields, &yaml.Node{Kind: yaml.ScalarNode, Value: "versions"}, &versions)
+	}
+	mapping.Content = fields
+	var output bytes.Buffer
+	encoder := yaml.NewEncoder(&output)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(&document); err != nil {
+		return err
+	}
+	data = output.Bytes()
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return err
 	}
 	// Only the canonical registry owns the edition history. A release branch
 	// renders its own default and must not recursively validate other editions.
 	return os.WriteFile(filepath.Join(root, "fern", "editions.yml"), []byte("schema_version: 1\neditions: []\n"), 0o644)
+}
+
+// Archives retain the historical product/version URLs while the default becomes
+// the branch's own edition. Fern composes only that default when resolving a ref.
+func editionArchives(config map[string]any) []any {
+	var archives []any
+	if versions, ok := config["versions"].([]any); ok {
+		for _, item := range versions {
+			version, ok := item.(map[string]any)
+			if ok && version["hidden"] == true {
+				archives = append(archives, version)
+			}
+		}
+	}
+	products, _ := config["products"].([]any)
+	for _, item := range products {
+		product, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		versions, _ := product["versions"].([]any)
+		for _, item := range versions {
+			version, ok := item.(map[string]any)
+			if !ok || version["slug"] == "dev" {
+				continue
+			}
+			archives = append(archives, map[string]any{
+				"display-name": fmt.Sprintf("%s %s archive", product["display-name"], version["display-name"]),
+				"slug":         fmt.Sprintf("%s/%s", product["slug"], version["slug"]), "path": version["path"], "hidden": true,
+			})
+		}
+	}
+	return archives
 }
 
 func editionTreeDigest(root string) (string, error) {
