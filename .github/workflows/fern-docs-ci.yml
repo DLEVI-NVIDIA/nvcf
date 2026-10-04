@@ -29,6 +29,10 @@ on:
       - 'tools/ci/check-doc-version-sync'
       - 'tools/ci/check-doc-editions'
       - 'tools/ci/preview-docs'
+      - 'tools/ci/check-doc-links'
+      - 'tools/ci/run-lychee'
+      - 'tools/ci/docs-links.toml'
+      - 'tools/scripts/test/test-check-doc-links'
       - 'tools/docs-version-sync/**'
       - 'tools/scripts/test/test-run-fern'
       - 'tools/scripts/test/test-preview-docs'
@@ -70,6 +74,7 @@ jobs:
         run: |
           bash tools/scripts/test/test-run-fern
           bash tools/scripts/test/test-preview-docs
+          bash tools/scripts/test/test-check-doc-links
 
       - name: Test docs version and edition tooling
         run: go test -C tools/docs-version-sync ./...
