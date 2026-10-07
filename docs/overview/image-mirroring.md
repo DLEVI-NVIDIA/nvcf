@@ -142,11 +142,17 @@ The examples use OVDC chart/image 6.0.1 and OVCC chart 4.0.4 with image
 `usd-content-cache:3.0.2`. Chart and image versions are independent. Retain
 `image.tag: "3.0.2"` in the OVCC Helm values; chart 4.0.4 defaults to image 3.0.1.
 
+Use a scoped, short-lived key. Helm stores repository credentials in
+`~/.config/helm/repositories.yaml` by default, even with `--password-stdin`.
+If `omniverse` was added only for this task, run `helm repo remove omniverse`
+after the final chart pull. Keep an existing entry used by other workflows.
+
 ```bash
 # Add the NVIDIA Helm repository
 helm repo add nvidia https://helm.ngc.nvidia.com/nvidia --force-update
-helm repo add omniverse https://helm.ngc.nvidia.com/nvidia/omniverse --force-update \
-  --username '$oauthtoken' --password "${NGC_API_KEY}"
+printf '%s\n' "${NGC_API_KEY}" |
+  helm repo add omniverse https://helm.ngc.nvidia.com/nvidia/omniverse --force-update \
+    --username '$oauthtoken' --password-stdin
 
 # Update repositories
 helm repo update
@@ -180,8 +186,9 @@ To push repository-based Helm charts to Amazon ECR (which requires OCI format), 
 # Pull the chart from the traditional repository
 # Select the version and repository for your release, as described above.
 OVDC_CHART_VERSION="${OVDC_CHART_VERSION:-6.0.1}"
-helm repo add omniverse https://helm.ngc.nvidia.com/nvidia/omniverse --force-update \
-  --username '$oauthtoken' --password "${NGC_API_KEY}"
+printf '%s\n' "${NGC_API_KEY}" |
+  helm repo add omniverse https://helm.ngc.nvidia.com/nvidia/omniverse --force-update \
+    --username '$oauthtoken' --password-stdin
 helm repo update
 helm pull omniverse/ovderivedcache --version "${OVDC_CHART_VERSION}"
 
