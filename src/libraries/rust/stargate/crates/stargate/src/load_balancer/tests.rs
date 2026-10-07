@@ -1253,9 +1253,6 @@ fn wait_and_widen_validates_cache_affinity_input_tokens_scale() {
             );
         }
         for scale in [0.0, 1.0] {
-            if algorithm == LoadBalancerAlgorithm::PulsarWaitAndWiden && scale != 1.0 {
-                continue;
-            }
             let config: LoadBalancerAlgorithmConfig = parse_json(&format!(
                 r#"{{"algorithm":"{algorithm}","cache_affinity_input_tokens_scale":{scale}}}"#
             ));
@@ -1282,23 +1279,22 @@ fn wait_and_widen_validates_cache_affinity_input_tokens_scale() {
 }
 
 #[test]
-fn pulsar_wait_and_widen_rejects_unsupported_affinity_settings() {
-    for (field, value) in [
-        ("cache_affinity_input_tokens_scale", "0.0"),
-        ("cache_affinity_input_tokens_scale", "0.1"),
-        ("cache_affinity_wait_ms", "1"),
-    ] {
-        let config: LoadBalancerAlgorithmConfig = parse_json(&format!(
-            r#"{{"algorithm":"pulsar-wait-and-widen","{field}":{value}}}"#
-        ));
+fn pulsar_only_settings_are_rejected_for_wait_and_widen() {
+    for field in ["band_widen_interval_ms", "fallback_max_queued"] {
+        let config: LoadBalancerAlgorithmConfig =
+            parse_json(&format!(r#"{{"algorithm":"wait-and-widen","{field}":0}}"#));
         let error = create_load_balancer_with_config(&config)
             .err()
-            .expect("unsupported affinity settings must fail");
+            .expect("wait-and-widen must reject Pulsar-only settings");
         assert!(error.to_string().contains(field));
     }
+}
+
+#[test]
+fn pulsar_wait_and_widen_accepts_affinity_settings() {
     for raw in [
         r#"{"algorithm":"pulsar-wait-and-widen"}"#,
-        r#"{"algorithm":"pulsar-wait-and-widen","cache_affinity_input_tokens_scale":1.0,"cache_affinity_wait_ms":0}"#,
+        r#"{"algorithm":"pulsar-wait-and-widen","cache_affinity_input_tokens_scale":0.1,"cache_affinity_wait_ms":300,"cache_affinity_backend_selection_count":2,"band_widen_interval_ms":100,"fallback_max_queued":0}"#,
     ] {
         let config: LoadBalancerAlgorithmConfig = parse_json(raw);
         assert!(create_load_balancer_with_config(&config).is_ok());
