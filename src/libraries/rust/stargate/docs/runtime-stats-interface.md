@@ -208,3 +208,34 @@ does not inflate that gauge.
 chat/Responses/embeddings endpoints, and `/kv-cache/stats`. Use
 `pylon --engine-stats-stream=off` when a test intentionally exercises OpenAI
 fallback.
+
+With `--profile h100-llama-3.1-8b`, `mock-dynamo` uses the batched engine model
+from the `mock-engine` crate by default. The model represents one Dynamo
+deployment:
+
+- `--num-gpu-workers N` sets the number of inference workers. Each worker has
+  its own scheduler and KV cache.
+- Each worker runs iteration-level steps. A step decodes one token for every
+  running sequence and spends the rest of `--max-batched-tokens` on chunked
+  prefill, so concurrent prompts share prefill compute and slow decode.
+- Requests go to the worker caching the most tokens for their
+  `x-cache-affinity-key`, even when that worker is busier than the others.
+  Requests without a cached key go to the least-loaded worker. A key is
+  cached only after its first prefill finishes, so concurrent first requests
+  for one key can land on different workers.
+- A completed request's cache entry covers its prompt and its output. A later
+  request with the same key reuses up to that many tokens. Matching is per
+  key, not per token block.
+- `/kv-cache/stats` reports deployment totals for capacity and used tokens.
+  Used tokens include cached prefixes and the memory reserved by running
+  requests. A request larger than a worker's capacity still runs alone, so
+  used can exceed capacity. Entry, hit, miss, and eviction counters report
+  zero for this model.
+- Stats stream pings advertise `max_engine_concurrency` as
+  `num_gpu_workers * max_num_seqs`. When Pylon does not read the stats stream,
+  set `--max-engine-concurrency` to the same value.
+
+`--explain-profile h100-llama-3.1-8b` prints the step costs. They are estimates
+until calibrated against a real engine. `--engine-model legacy` restores the
+earlier model, where each request has fixed, independent prefill and decode
+delays.
