@@ -552,8 +552,6 @@ redirects:
     destination: "/nvcf/dev/compute-plane/container-cache"
   - source: "/nvcf/gx-cache"
     destination: "/nvcf/compute-plane/gx-cache"
-  - source: "/nvcf/dev/gx-cache"
-    destination: "/nvcf/dev/compute-plane/gx-cache"
   - source: "/nvcf/simulation-caches"
     destination: "/nvcf/compute-plane/simulation-caches"
   - source: "/nvcf/dev/simulation-caches"

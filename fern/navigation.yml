@@ -300,9 +300,6 @@ navigation:
       - page: Container Cache
         path: ../docs/compute-plane/cluster-management/container-cache.md
         slug: container-cache
-      - page: GXCache
-        path: ../docs/compute-plane/cluster-management/gxcache.md
-        slug: gx-cache
     - section: Physical Simulation Caches
       skip-slug: true
       contents:
