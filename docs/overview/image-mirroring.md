@@ -35,21 +35,8 @@ export NGC_API_KEY="nvapi-xxxxxxxxxxxxx"  # Replace with your NGC API key
 
 ## LLS-Specific Artifacts
 
-If you plan to deploy Low Latency Streaming (LLS), you must mirror the following additional artifacts beyond the core NVCF control plane:
-
-Container Images:
-
-- `streaming-proxy` - Streaming Proxy container for streaming
-
-Helm Charts:
-
-- `gdn-streaming` - GDN Streaming Proxy Helm chart
-
-Optional (for streaming workloads):
-
-- Streaming application images (e.g., `usd-composer`)
-
-See [self-hosted-lls-installation](../self-managed/lls-installation.md) for LLS deployment instructions.
+For Low Latency Streaming (LLS) artifacts and mirroring instructions, see the
+[LLS deployment guide](https://docs.omniverse.nvidia.com/ovs/latest/low-latency-streaming/lls-deployment.html#step-1-mirror-lls-artifacts).
 
 ## Pulling Artifacts from NGC
 
