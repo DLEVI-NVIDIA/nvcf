@@ -109,8 +109,8 @@ obtain the request ID from the proxy, and use that ID for subsequent requests.
 
 </Warning>
 
-For requirements and a sample intermediary proxy implementation, see
-[Intermediary Proxy](./streaming-functions.md#intermediary-proxy).
+For the streaming web client and its intermediary proxy, see the
+[NVCF sample configuration](https://docs.omniverse.nvidia.com/ovs/latest/kit-guide/web-streaming-client.html#available-sample-configurations).
 
 ## Session Resumption
 
