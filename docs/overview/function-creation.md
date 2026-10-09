@@ -27,7 +27,7 @@ For LLM functions, see [LLM Gateway](./llm-gateway.md#function-configuration) fo
   functions through the Gateway TCP listener.
 - [LLM invocation](./llm-gateway.md#endpoint-behavior): Invoke
   OpenAI-compatible LLM functions through `llm.invocation.<domain>`.
-- [LLS/WebRTC client connection](./streaming-functions.md#connecting-to-a-streaming-function-with-a-client):
+- [LLS/WebRTC client connection](https://docs.omniverse.nvidia.com/ov-web-sdk/latest/web-sample/overview.html#nvcf-sample):
   Connect browser or proxy clients to streaming functions.
 
 ## Best Practices
